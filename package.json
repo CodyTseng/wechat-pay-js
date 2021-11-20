@@ -1,0 +1,50 @@
+{
+  "name": "wechat-pay-js",
+  "version": "1.0.0",
+  "description": "wechat pay sdk for nodejs",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "lint": "eslint \"src/*.{js,ts}\" --fix",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint",
+    "preversion": "npm run lint",
+    "version": "npm run format && git add -A src",
+    "postversion": "git push && git push --tags"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodyTseng/wechat-pay-js.git"
+  },
+  "keywords": [
+    "wechat",
+    "pay",
+    "wechatpay",
+    "sdk",
+    "v3"
+  ],
+  "author": "CodyTseng",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/CodyTseng/wechat-pay-js/issues"
+  },
+  "homepage": "https://github.com/CodyTseng/wechat-pay-js#readme",
+  "devDependencies": {
+    "@types/node": "^16.11.9",
+    "@typescript-eslint/eslint-plugin": "^5.4.0",
+    "@typescript-eslint/parser": "^5.4.0",
+    "eslint": "^8.2.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "prettier": "^2.4.1",
+    "typescript": "^4.5.2"
+  },
+  "files": [
+    "lib/*"
+  ],
+  "dependencies": {
+    "urllib": "^2.37.4"
+  }
+}
