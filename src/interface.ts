@@ -1,7 +1,8 @@
 export type TradeType = 'JSAPI' | 'APP' | 'NATIVE';
 
+export type GenerateNonceFunc = (length: number) => string;
+
 export type WechatPayOptions = {
-  name?: string;
   appId: string;
   mchId: string;
   apiV3Key: string;
@@ -9,6 +10,8 @@ export type WechatPayOptions = {
   serialNo: string;
   tradeType: TradeType;
   needVerify?: boolean;
+  nonceLength?: number;
+  generateNonceFunc?: GenerateNonceFunc;
 };
 
 export interface WechatPayCert {
@@ -65,7 +68,7 @@ export type CreateTransactionOptions = {
   };
 };
 
-export type RefundOptions = {
+export type CreateRefundOptions = {
   transaction_id?: string; // 微信支付订单号
   out_trade_no?: string; // 商户订单号
   out_refund_no: string; // 商户退款单号
@@ -94,8 +97,21 @@ export type RefundOptions = {
   }[];
 };
 
-export type TransactionPrepayDetails = {
+export type CreateTransactionResult =
+  | CreateTransactionJsapiResult
+  | CreateTransactionAppResult
+  | CreateTransactionNativeResult;
+
+export type CreateTransactionJsapiResult = {
   prepay_id: string; // 预支付交易会话标识
+};
+
+export type CreateTransactionAppResult = {
+  prepay_id: string; // 预支付交易会话标识
+};
+
+export type CreateTransactionNativeResult = {
+  code_url: string; // 二维码链接
 };
 
 export type TransactionDetails = {

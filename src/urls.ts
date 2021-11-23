@@ -1,7 +1,9 @@
+import { TradeType } from './interface';
+
 export const CertificatesUrl = () =>
   'https://api.mch.weixin.qq.com/v3/certificates';
 
-export const TransactionsUrl = (tradeType: string) =>
+export const CreateTransactionUrl = (tradeType: TradeType) =>
   `https://api.mch.weixin.qq.com/v3/pay/transactions/${tradeType.toLowerCase()}`;
 
 export const QueryTransactionUrl = (id: string, mchId: string) =>

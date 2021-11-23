@@ -1,4 +1,4 @@
-export function generateNonce(length = 16) {
+export function generateNonce(length: number) {
   let ret = '';
   const seed = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
