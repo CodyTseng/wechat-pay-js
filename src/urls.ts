@@ -6,8 +6,14 @@ export const CertificatesUrl = () =>
 export const CreateTransactionUrl = (tradeType: TradeType) =>
   `https://api.mch.weixin.qq.com/v3/pay/transactions/${tradeType.toLowerCase()}`;
 
+export const CreateCombineTransactionUrl = (tradeType: TradeType) =>
+  `https://api.mch.weixin.qq.com/v3/combine-transactions/${tradeType.toLowerCase()}`;
+
 export const QueryTransactionUrl = (id: string, mchId: string) =>
   `https://api.mch.weixin.qq.com/v3/pay/transactions/id/${id}?mchid=${mchId}`;
+
+export const QueryCombineTransactionUrl = (combineOutTradeNo: string) =>
+  `https://api.mch.weixin.qq.com/v3/combine-transactions/out-trade-no/${combineOutTradeNo}`;
 
 export const QueryTransactionByOutTradeNoUrl = (
   outTradeNo: string,
@@ -17,6 +23,9 @@ export const QueryTransactionByOutTradeNoUrl = (
 
 export const CloseTransactionUrl = (outTradeNo: string) =>
   `https://api.mch.weixin.qq.com/v3/pay/transactions/out-trade-no/${outTradeNo}/close`;
+
+export const CloseCombineTransactionUrl = (combineOutTradeNo: string) =>
+  `https://api.mch.weixin.qq.com/v3/combine-transactions/out-trade-no/${combineOutTradeNo}/close`;
 
 export const RefundUrl = () =>
   'https://api.mch.weixin.qq.com/v3/refund/domestic/refunds';
