@@ -1,2 +1,2 @@
 export * from './wechat-pay';
-export * from './interface';
+export * from './interfaces';

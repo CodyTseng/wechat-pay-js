@@ -1,15 +1,15 @@
-import { TradeType } from '../interface';
+import { AppIdType } from '../interfaces';
 
 export function buildPaySignMessage(
   appId: string,
   timestamp: number,
   nonce: string,
   prepayId: string,
-  tradeType: TradeType,
+  appIdType: AppIdType,
 ) {
-  if (tradeType === 'JSAPI') {
+  if (appIdType === 'JSAPI') {
     return `${appId}\n${timestamp}\n${nonce}\nprepay_id=${prepayId}\n`;
-  } else if (tradeType === 'APP') {
+  } else if (appIdType === 'APP') {
     return `${appId}\n${timestamp}\n${nonce}\n${prepayId}\n`;
   }
   return '';

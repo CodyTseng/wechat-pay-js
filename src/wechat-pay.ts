@@ -5,23 +5,11 @@ import {
   buildPaySignMessage,
   buildRequestMessage,
   buildVerifyMessage,
+  buildToken,
   generateNonce,
   sign,
   verify,
 } from './utils';
-import {
-  TradeType,
-  CreateTransactionOptions,
-  CreateTransactionResult,
-  TransactionDetails,
-  CreateRefundOptions,
-  RefundDetails,
-  WechatPayOptions,
-  WechatPayCert,
-  TradeBillResult,
-  FundFlowBillResult,
-  GenerateNonceFunc,
-} from './interface';
 import {
   CertificatesUrl,
   CloseTransactionUrl,
@@ -35,16 +23,28 @@ import {
   RefundUrl,
   TradeBillUrl,
 } from './urls';
-import { buildToken } from './utils/buildToken';
 import {
+  AccountType,
+  AppIdType,
+  BillType,
+  CreateTransactionOptions,
+  CreateTransactionResult,
+  TransactionDetails,
+  CreateRefundOptions,
+  RefundDetails,
+  WechatPayOptions,
+  Certificate,
+  TradeBillResult,
+  FundFlowBillResult,
+  GenerateNonceFunc,
   CloseCombineTransactionOptions,
   CombineTransactionDetails,
   CreateCombineTransactionResult,
   CreateCombineTrasactionOptions,
   FailResult,
-  QueryGertificatesResult,
+  QueryCertificatesResult,
   SuccessResult,
-} from '.';
+} from './interfaces';
 import { WechatPayError } from './error';
 
 export class WechatPay {
@@ -53,8 +53,8 @@ export class WechatPay {
   private _apiV3Key: string;
   private _privateKey: Buffer;
   private _serialNo: string;
-  private _tradeType: TradeType;
-  private _certs: WechatPayCert[];
+  private _appIdType: AppIdType;
+  private _certs: Certificate[];
   private _needVerify: boolean;
   private _nonceLength: number;
   private _generateNonceFunc: GenerateNonceFunc;
@@ -65,9 +65,9 @@ export class WechatPay {
     this._apiV3Key = options.apiV3Key;
     this._privateKey = fs.readFileSync(options.privateKeyPath);
     this._serialNo = options.serialNo;
-    this._tradeType = options.tradeType;
-    this._needVerify = options.needVerify || false;
+    this._appIdType = options.appIdType;
     this._certs = [];
+    this._needVerify = options.needVerify || true;
     this._nonceLength = options.nonceLength || 16;
     this._generateNonceFunc = options.generateNonceFunc || generateNonce;
     if (this._needVerify) {
@@ -83,8 +83,8 @@ export class WechatPay {
     return this._mchId;
   }
 
-  get tradeType() {
-    return this._tradeType;
+  get appIdType() {
+    return this._appIdType;
   }
 
   get certs() {
@@ -149,28 +149,8 @@ export class WechatPay {
     return this._success<T>(result.data.length ? JSON.parse(result.data) : {});
   }
 
-  async decipher(ciphertext: string, associatedData: string, nonceStr: string) {
-    const buff = Buffer.from(ciphertext, 'base64');
-
-    const authTag = buff.slice(buff.length - 16);
-    const data = buff.slice(0, buff.length - 16);
-
-    const _decipher = crypto.createDecipheriv(
-      'aes-256-gcm',
-      this._apiV3Key,
-      nonceStr,
-    );
-    _decipher.setAuthTag(authTag);
-    _decipher.setAAD(Buffer.from(associatedData));
-
-    const decoded = _decipher.update(data, undefined, 'utf8');
-
-    _decipher.final();
-    return decoded;
-  }
-
   async updateCerts() {
-    const res = await this.request<QueryGertificatesResult>(
+    const res = await this.request<QueryCertificatesResult>(
       'GET',
       CertificatesUrl(),
     );
@@ -181,7 +161,7 @@ export class WechatPay {
     this._certs = [];
     for (const item of res.data.data) {
       const { encrypt_certificate, ...info } = item;
-      const certificate = await this.decipher(
+      const certificate = this.decipher(
         encrypt_certificate.ciphertext,
         encrypt_certificate.associated_data,
         encrypt_certificate.nonce,
@@ -191,7 +171,7 @@ export class WechatPay {
   }
 
   async createTransaction(options: CreateTransactionOptions) {
-    if (this._tradeType === 'JSAPI' && !options.payer?.openid) {
+    if (this._appIdType === 'JSAPI' && !options.payer?.openid) {
       throw new WechatPayError(
         'create jsapi transaction need options.payer.openid',
       );
@@ -199,7 +179,7 @@ export class WechatPay {
 
     return await this.request<CreateTransactionResult>(
       'POST',
-      CreateTransactionUrl(this._tradeType),
+      CreateTransactionUrl(this._appIdType),
       Object.assign(options, {
         appid: this._appId,
         mchid: this._mchId,
@@ -208,7 +188,7 @@ export class WechatPay {
   }
 
   async createCombineTransaction(options: CreateCombineTrasactionOptions) {
-    if (this._tradeType === 'JSAPI' && !options.combine_payer_info?.openid) {
+    if (this._appIdType === 'JSAPI' && !options.combine_payer_info?.openid) {
       throw new WechatPayError(
         'create jsapi transaction need options.combine_payer_info.openid',
       );
@@ -216,7 +196,7 @@ export class WechatPay {
 
     return await this.request<CreateCombineTransactionResult>(
       'POST',
-      CreateCombineTransactionUrl(this._tradeType),
+      CreateCombineTransactionUrl(this._appIdType),
       Object.assign(options, {
         combine_appid: this._appId,
         combine_mchid: this.mchId,
@@ -281,7 +261,7 @@ export class WechatPay {
 
   async tradeBill(
     billDate: string,
-    billType: 'ALL' | 'SUCCESS' | 'REFUND' = 'ALL',
+    billType: BillType = 'ALL',
     tarType?: 'GZIP',
   ) {
     return await this.request<TradeBillResult>(
@@ -292,7 +272,7 @@ export class WechatPay {
 
   async fundFlowBill(
     billDate: string,
-    accountType: 'BASIC' | 'OPERATION' | 'FEES' = 'BASIC',
+    accountType: AccountType = 'BASIC',
     tarType?: 'GZIP',
   ) {
     return await this.request<FundFlowBillResult>(
@@ -313,7 +293,7 @@ export class WechatPay {
       timestamp,
       nonceStr,
       prepayId,
-      this._tradeType,
+      this._appIdType,
     );
     const paySign = sign(this._privateKey, message);
 
@@ -325,6 +305,26 @@ export class WechatPay {
       signType: 'RSA',
       paySign,
     };
+  }
+
+  decipher(ciphertext: string, associatedData: string, nonceStr: string) {
+    const buff = Buffer.from(ciphertext, 'base64');
+
+    const authTag = buff.slice(buff.length - 16);
+    const data = buff.slice(0, buff.length - 16);
+
+    const _decipher = crypto.createDecipheriv(
+      'aes-256-gcm',
+      this._apiV3Key,
+      nonceStr,
+    );
+    _decipher.setAuthTag(authTag);
+    _decipher.setAAD(Buffer.from(associatedData));
+
+    const decoded = _decipher.update(data, undefined, 'utf8');
+
+    _decipher.final();
+    return decoded;
   }
 
   private _getToken(method: urllib.HttpMethod, url: string, bodyStr: string) {

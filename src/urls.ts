@@ -1,13 +1,13 @@
-import { TradeType } from './interface';
+import { AppIdType } from './interfaces';
 
 export const CertificatesUrl = () =>
   'https://api.mch.weixin.qq.com/v3/certificates';
 
-export const CreateTransactionUrl = (tradeType: TradeType) =>
-  `https://api.mch.weixin.qq.com/v3/pay/transactions/${tradeType.toLowerCase()}`;
+export const CreateTransactionUrl = (appIdType: AppIdType) =>
+  `https://api.mch.weixin.qq.com/v3/pay/transactions/${appIdType.toLowerCase()}`;
 
-export const CreateCombineTransactionUrl = (tradeType: TradeType) =>
-  `https://api.mch.weixin.qq.com/v3/combine-transactions/${tradeType.toLowerCase()}`;
+export const CreateCombineTransactionUrl = (appIdType: AppIdType) =>
+  `https://api.mch.weixin.qq.com/v3/combine-transactions/${appIdType.toLowerCase()}`;
 
 export const QueryTransactionUrl = (id: string, mchId: string) =>
   `https://api.mch.weixin.qq.com/v3/pay/transactions/id/${id}?mchid=${mchId}`;
