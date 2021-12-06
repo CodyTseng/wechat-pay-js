@@ -4,4 +4,4 @@ export * from './combine-transaction.interface';
 export * from './common.interface';
 export * from './refund.interface';
 export * from './transaction.interface';
-export * from './wechat-pay.interface';
+export * from './wechatpay.interface';

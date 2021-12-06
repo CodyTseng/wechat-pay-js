@@ -1,2 +1,4 @@
-# wechat-pay-js
-wechat pay sdk for nodejs
+# wechatpay-v3
+wechatpay sdk for nodejs
+
+IN DEVELOPMENT!

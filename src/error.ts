@@ -1,5 +1,5 @@
-export class WechatPayError extends Error {
+export class WechatpayError extends Error {
   constructor(message: string) {
-    super('[wechat-pay] ' + message);
+    super('[wechatpay] ' + message);
   }
 }

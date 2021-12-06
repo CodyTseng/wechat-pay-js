@@ -2,7 +2,7 @@ import { AppIdType } from './common.interface';
 
 export type GenerateNonceFunc = (length: number) => string;
 
-export interface WechatPayOptions {
+export interface WechatpayOptions {
   appId: string;
   mchId: string;
   apiV3Key: string;

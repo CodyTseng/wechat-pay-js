@@ -32,7 +32,7 @@ import {
   TransactionDetails,
   CreateRefundOptions,
   RefundDetails,
-  WechatPayOptions,
+  WechatpayOptions,
   Certificate,
   TradeBillResult,
   FundFlowBillResult,
@@ -45,9 +45,9 @@ import {
   QueryCertificatesResult,
   SuccessResult,
 } from './interfaces';
-import { WechatPayError } from './error';
+import { WechatpayError } from './error';
 
-export class WechatPay {
+export class Wechatpay {
   private _appId: string;
   private _mchId: string;
   private _apiV3Key: string;
@@ -59,7 +59,7 @@ export class WechatPay {
   private _nonceLength: number;
   private _generateNonceFunc: GenerateNonceFunc;
 
-  constructor(options: WechatPayOptions) {
+  constructor(options: WechatpayOptions) {
     this._appId = options.appId;
     this._mchId = options.mchId;
     this._apiV3Key = options.apiV3Key;
@@ -112,7 +112,7 @@ export class WechatPay {
     try {
       result = await urllib.request(url, options);
     } catch (err) {
-      throw new WechatPayError('http request failed');
+      throw new WechatpayError('http request failed');
     }
 
     if (result.status !== 200 && result.status !== 204) {
@@ -134,7 +134,7 @@ export class WechatPay {
         (item) => item.serial_no === result.headers['wechatpay-serial'],
       );
       if (!cert) {
-        throw new WechatPayError('cert not found');
+        throw new WechatpayError('cert not found');
       }
       const verifyResult = verify(
         cert.certificate,
@@ -155,7 +155,7 @@ export class WechatPay {
       CertificatesUrl(),
     );
     if (!res.isSuccess) {
-      throw new WechatPayError('update certs fail');
+      throw new WechatpayError('update certs fail');
     }
 
     this._certs = [];
@@ -172,7 +172,7 @@ export class WechatPay {
 
   async createTransaction(options: CreateTransactionOptions) {
     if (this._appIdType === 'JSAPI' && !options.payer?.openid) {
-      throw new WechatPayError(
+      throw new WechatpayError(
         'create jsapi transaction need options.payer.openid',
       );
     }
@@ -189,7 +189,7 @@ export class WechatPay {
 
   async createCombineTransaction(options: CreateCombineTrasactionOptions) {
     if (this._appIdType === 'JSAPI' && !options.combine_payer_info?.openid) {
-      throw new WechatPayError(
+      throw new WechatpayError(
         'create jsapi transaction need options.combine_payer_info.openid',
       );
     }
@@ -246,7 +246,7 @@ export class WechatPay {
 
   async createRefund(options: CreateRefundOptions) {
     if (!options.out_refund_no && !options.transaction_id) {
-      throw new WechatPayError('missing out_trade_no or transaction_id');
+      throw new WechatpayError('missing out_trade_no or transaction_id');
     }
 
     return await this.request<RefundDetails>('POST', RefundUrl(), options);
