@@ -1,5 +1,5 @@
 {
-  "name": "wechatpay-v3",
+  "name": "@codytseng/wechatpay-v3",
   "version": "0.1.0",
   "description": "wechatpay v3 sdk for nodejs",
   "main": "lib/index.js",
