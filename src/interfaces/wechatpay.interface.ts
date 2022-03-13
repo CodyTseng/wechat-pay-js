@@ -12,4 +12,6 @@ export interface WechatpayOptions {
   needVerify?: boolean;
   nonceLength?: number;
   generateNonceFunc?: GenerateNonceFunc;
+  transactionNotifyUrl?: string;
+  refundNotifyUrl?: string;
 }

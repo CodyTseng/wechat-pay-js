@@ -37,7 +37,7 @@ export interface CreateCombineTrasactionOptions {
   };
   time_start?: string; // 交易起始时间
   time_expire?: string; // 交易结束时间
-  notify_url: string; // 回调地址
+  notify_url?: string; // 回调地址
 }
 
 export type CreateCombineTransactionResult =

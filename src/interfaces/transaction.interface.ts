@@ -9,7 +9,7 @@ import {
 export interface CreateTransactionOptions {
   description: string; // 商品描述
   out_trade_no: string; // 商户系统内部订单号
-  notify_url: string; // 通知地址
+  notify_url?: string; // 通知地址
   // 订单金额
   amount: {
     total: number; // 总金额，单位为分
@@ -20,7 +20,7 @@ export interface CreateTransactionOptions {
     openid: string; // 用户openid
   };
   // 场景信息
-  scene_info: {
+  scene_info?: {
     payer_client_ip: string; // 用户终端IP
     device_id?: string; // 商户端设备号
     // 商户门店信息

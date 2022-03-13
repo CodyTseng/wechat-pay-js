@@ -58,6 +58,8 @@ export class Wechatpay {
   private _needVerify: boolean;
   private _nonceLength: number;
   private _generateNonceFunc: GenerateNonceFunc;
+  private _transactionNotifyUrl?: string;
+  private _refundNotifyUrl?: string;
 
   constructor(options: WechatpayOptions) {
     this._appId = options.appId;
@@ -70,6 +72,8 @@ export class Wechatpay {
     this._needVerify = options.needVerify || true;
     this._nonceLength = options.nonceLength || 16;
     this._generateNonceFunc = options.generateNonceFunc || generateNonce;
+    this._transactionNotifyUrl = options.transactionNotifyUrl;
+    this._refundNotifyUrl = options.refundNotifyUrl;
     if (this._needVerify) {
       this.updateCerts();
     }
@@ -180,10 +184,11 @@ export class Wechatpay {
     return await this.request<CreateTransactionResult>(
       'POST',
       CreateTransactionUrl(this._appIdType),
-      Object.assign(options, {
+      Object.assign({
         appid: this._appId,
         mchid: this._mchId,
-      }),
+        notify_url: this._transactionNotifyUrl,
+      }, options),
     );
   }
 
@@ -197,10 +202,11 @@ export class Wechatpay {
     return await this.request<CreateCombineTransactionResult>(
       'POST',
       CreateCombineTransactionUrl(this._appIdType),
-      Object.assign(options, {
+      Object.assign({
         combine_appid: this._appId,
         combine_mchid: this.mchId,
-      }),
+        notify_url: this._transactionNotifyUrl,
+      }, options),
     );
   }
 
@@ -238,9 +244,9 @@ export class Wechatpay {
     return await this.request(
       'POST',
       CloseTransactionUrl(combineOutTradeNo),
-      Object.assign(options, {
+      Object.assign({
         combine_appid: this._appId,
-      }),
+      }, options),
     );
   }
 
@@ -249,7 +255,13 @@ export class Wechatpay {
       throw new WechatpayError('missing out_trade_no or transaction_id');
     }
 
-    return await this.request<RefundDetails>('POST', RefundUrl(), options);
+    return await this.request<RefundDetails>(
+      'POST',
+      RefundUrl(),
+      Object.assign({
+        notify_url: this._refundNotifyUrl,
+      }, options),
+    );
   }
 
   async queryRefund(outRefundNo: string) {
