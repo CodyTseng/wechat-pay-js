@@ -1,13 +1,13 @@
-import { AppIdType } from './interfaces';
+import { PaymentMethod } from './contants';
 
 export const CertificatesUrl = () =>
   'https://api.mch.weixin.qq.com/v3/certificates';
 
-export const CreateTransactionUrl = (appIdType: AppIdType) =>
-  `https://api.mch.weixin.qq.com/v3/pay/transactions/${appIdType.toLowerCase()}`;
+export const CreateTransactionUrl = (paymentMethod: PaymentMethod) =>
+  `https://api.mch.weixin.qq.com/v3/pay/transactions/${paymentMethod}`;
 
-export const CreateCombineTransactionUrl = (appIdType: AppIdType) =>
-  `https://api.mch.weixin.qq.com/v3/combine-transactions/${appIdType.toLowerCase()}`;
+export const CreateCombineTransactionUrl = (paymentMethod: PaymentMethod) =>
+  `https://api.mch.weixin.qq.com/v3/combine-transactions/${paymentMethod}`;
 
 export const QueryTransactionUrl = (id: string, mchId: string) =>
   `https://api.mch.weixin.qq.com/v3/pay/transactions/id/${id}?mchid=${mchId}`;

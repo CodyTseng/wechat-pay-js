@@ -1,7 +1,7 @@
 export function buildVerifyMessage(
-  timestamp: number,
+  timestamp: string,
   nonceStr: string,
-  bodyStr: string,
+  dataStr: string,
 ) {
-  return `${timestamp}\n${nonceStr}\n${bodyStr}\n`;
+  return `${timestamp}\n${nonceStr}\n${dataStr}\n`;
 }

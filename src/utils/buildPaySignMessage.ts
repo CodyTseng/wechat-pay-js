@@ -1,15 +1,15 @@
-import { AppIdType } from '../interfaces';
+import { PaymentMethod } from '../contants';
 
 export function buildPaySignMessage(
   appId: string,
   timestamp: number,
   nonce: string,
   prepayId: string,
-  appIdType: AppIdType,
+  paymentMethod: PaymentMethod,
 ) {
-  if (appIdType === 'JSAPI') {
+  if (paymentMethod === PaymentMethod.JSAPI) {
     return `${appId}\n${timestamp}\n${nonce}\nprepay_id=${prepayId}\n`;
-  } else if (appIdType === 'APP') {
+  } else if (paymentMethod === PaymentMethod.APP) {
     return `${appId}\n${timestamp}\n${nonce}\n${prepayId}\n`;
   }
   return '';

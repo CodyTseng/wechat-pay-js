@@ -5,3 +5,4 @@ export * from './buildReqeustMessage';
 export * from './buildVerifyMessage';
 export * from './buildToken';
 export * from './buildPaySignMessage';
+export * from './type';

@@ -1,50 +1,28 @@
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as urllib from 'urllib';
+import axios, { Method, AxiosResponse } from 'axios';
+import { merge } from 'lodash';
 import {
-  buildPaySignMessage,
+  Certificate,
+  CreateTransactionAPPResult,
+  CreateTransactionJSAPIResult,
+  CreateTransactionNativeResult,
+  CreateTransactionOptions,
+  CreateTransactionResult,
+  GenerateNonceFunc,
+  QueryCertificatesResult,
+  WechatpayOptions,
+} from './interfaces';
+import {
   buildRequestMessage,
-  buildVerifyMessage,
   buildToken,
+  buildVerifyMessage,
   generateNonce,
+  Require,
   sign,
   verify,
 } from './utils';
-import {
-  CertificatesUrl,
-  CloseTransactionUrl,
-  CreateCombineTransactionUrl,
-  CreateTransactionUrl,
-  FundFlowBillUrl,
-  QueryCombineTransactionUrl,
-  QueryRefundUrl,
-  QueryTransactionByOutTradeNoUrl,
-  QueryTransactionUrl,
-  RefundUrl,
-  TradeBillUrl,
-} from './urls';
-import {
-  AccountType,
-  AppIdType,
-  BillType,
-  CreateTransactionOptions,
-  CreateTransactionResult,
-  TransactionDetails,
-  CreateRefundOptions,
-  RefundDetails,
-  WechatpayOptions,
-  Certificate,
-  TradeBillResult,
-  FundFlowBillResult,
-  GenerateNonceFunc,
-  CloseCombineTransactionOptions,
-  CombineTransactionDetails,
-  CreateCombineTransactionResult,
-  CreateCombineTrasactionOptions,
-  FailResult,
-  QueryCertificatesResult,
-  SuccessResult,
-} from './interfaces';
+import * as crypto from 'crypto';
+import { CertificatesUrl, CreateTransactionUrl } from './urls';
+import { PaymentMethod } from './contants';
 import { WechatpayError } from './error';
 
 export class Wechatpay {
@@ -53,92 +31,55 @@ export class Wechatpay {
   private _apiV3Key: string;
   private _privateKey: Buffer;
   private _serialNo: string;
-  private _appIdType: AppIdType;
-  private _certs: Certificate[];
   private _needVerify: boolean;
   private _nonceLength: number;
   private _generateNonceFunc: GenerateNonceFunc;
   private _transactionNotifyUrl?: string;
   private _refundNotifyUrl?: string;
+  private _certs: Certificate[] = [];
 
   constructor(options: WechatpayOptions) {
     this._appId = options.appId;
     this._mchId = options.mchId;
     this._apiV3Key = options.apiV3Key;
-    this._privateKey = fs.readFileSync(options.privateKeyPath);
+    this._privateKey =
+      'string' === typeof options.privateKey
+        ? Buffer.from(options.privateKey, 'base64')
+        : options.privateKey;
     this._serialNo = options.serialNo;
-    this._appIdType = options.appIdType;
-    this._certs = [];
-    this._needVerify = options.needVerify || true;
+    this._needVerify =
+      options.needVerify == undefined ? true : options.needVerify;
     this._nonceLength = options.nonceLength || 16;
     this._generateNonceFunc = options.generateNonceFunc || generateNonce;
     this._transactionNotifyUrl = options.transactionNotifyUrl;
     this._refundNotifyUrl = options.refundNotifyUrl;
-    if (this._needVerify) {
-      this.updateCerts();
-    }
   }
 
-  get appId() {
-    return this._appId;
-  }
-
-  get mchId() {
-    return this._mchId;
-  }
-
-  get appIdType() {
-    return this._appIdType;
-  }
-
-  get certs() {
-    return this._certs;
-  }
-
-  async request<T = undefined>(
-    method: urllib.HttpMethod,
-    url: string,
-    body?: any,
-  ) {
-    const bodyStr = body ? JSON.stringify(body) : '';
-    const token = this._getToken(method, url, bodyStr);
-    const options = {
+  async _request<R = void, D = any>(method: Method, url: string, data?: D) {
+    const dataStr = data ? JSON.stringify(data) : '';
+    const token = this.getToken(method, url, dataStr);
+    const result = await axios.request<R, AxiosResponse<R, D>, D>({
       method,
+      url,
+      data,
       headers: {
         authorization: `WECHATPAY2-SHA256-RSA2048 ${token}`,
         accept: 'application/json',
         'content-type': 'application/json',
       },
-      data: body,
-    };
-
-    let result: any;
-    try {
-      result = await urllib.request(url, options);
-    } catch (err) {
-      throw new WechatpayError('http request failed');
-    }
-
-    if (result.status !== 200 && result.status !== 204) {
-      const { code, message, detail } = JSON.parse(result.data);
-      return this._fail(message, code, result.status, detail);
-    }
-
-    if (result.headers['content-type'].split(';')[0] !== 'application/json') {
-      return this._success<T>(result.data);
-    }
+    });
 
     if (this._needVerify && this._certs.length > 0) {
       const message = buildVerifyMessage(
         result.headers['wechatpay-timestamp'],
         result.headers['wechatpay-nonce'],
-        result.data.toString(),
+        result.data ? JSON.stringify(result.data) : '',
       );
       const cert = this._certs.find(
         (item) => item.serial_no === result.headers['wechatpay-serial'],
       );
       if (!cert) {
-        throw new WechatpayError('cert not found');
+        throw new WechatpayError('微信支付 API 响应结果证书不正确');
       }
       const verifyResult = verify(
         cert.certificate,
@@ -146,184 +87,187 @@ export class Wechatpay {
         result.headers['wechatpay-signature'],
       );
       if (!verifyResult) {
-        return this._fail('微信返回结果签名验证失败', 'VERIFY_FAIL', 500);
+        throw new WechatpayError('微信支付 API 响应结果签名验证失败');
       }
     }
 
-    return this._success<T>(result.data.length ? JSON.parse(result.data) : {});
+    return result.data;
   }
 
   async updateCerts() {
-    const res = await this.request<QueryCertificatesResult>(
+    const res = await this._request<QueryCertificatesResult>(
       'GET',
       CertificatesUrl(),
     );
-    if (!res.isSuccess) {
-      throw new WechatpayError('update certs fail');
-    }
 
-    this._certs = [];
-    for (const item of res.data.data) {
+    this._certs = res.data.map((item) => {
       const { encrypt_certificate, ...info } = item;
       const certificate = this.decipher(
         encrypt_certificate.ciphertext,
         encrypt_certificate.associated_data,
         encrypt_certificate.nonce,
       );
-      this._certs.push(Object.assign(info, { certificate }));
-    }
-  }
-
-  async createTransaction(options: CreateTransactionOptions) {
-    if (this._appIdType === 'JSAPI' && !options.payer?.openid) {
-      throw new WechatpayError(
-        'create jsapi transaction need options.payer.openid',
-      );
-    }
-
-    return await this.request<CreateTransactionResult>(
-      'POST',
-      CreateTransactionUrl(this._appIdType),
-      Object.assign({
-        appid: this._appId,
-        mchid: this._mchId,
-        notify_url: this._transactionNotifyUrl,
-      }, options),
-    );
-  }
-
-  async createCombineTransaction(options: CreateCombineTrasactionOptions) {
-    if (this._appIdType === 'JSAPI' && !options.combine_payer_info?.openid) {
-      throw new WechatpayError(
-        'create jsapi transaction need options.combine_payer_info.openid',
-      );
-    }
-
-    return await this.request<CreateCombineTransactionResult>(
-      'POST',
-      CreateCombineTransactionUrl(this._appIdType),
-      Object.assign({
-        combine_appid: this._appId,
-        combine_mchid: this.mchId,
-        notify_url: this._transactionNotifyUrl,
-      }, options),
-    );
-  }
-
-  async queryTransaction(id: string) {
-    return await this.request<TransactionDetails>(
-      'GET',
-      QueryTransactionUrl(id, this._mchId),
-    );
-  }
-
-  async queryTransactionByOutTradeNo(outTradeNo: string) {
-    return await this.request<TransactionDetails>(
-      'GET',
-      QueryTransactionByOutTradeNoUrl(outTradeNo, this._mchId),
-    );
-  }
-
-  async queryCombineTransaction(combineOutTradeNo: string) {
-    return await this.request<CombineTransactionDetails>(
-      'GET',
-      QueryCombineTransactionUrl(combineOutTradeNo),
-    );
-  }
-
-  async closeTransaction(outTradeNo: string) {
-    return await this.request('POST', CloseTransactionUrl(outTradeNo), {
-      mchid: this._mchId,
+      return Object.assign(info, { certificate });
     });
   }
 
-  async closeCombineTransaction(
-    combineOutTradeNo: string,
-    options: CloseCombineTransactionOptions,
+  async createTransactionJSAPI(
+    options: CreateTransactionOptions,
+  ): Promise<CreateTransactionJSAPIResult>;
+  async createTransactionJSAPI(
+    outTradeNo: string,
+    description: string,
+    totalAmount: number,
+    openId: string,
+    options?: Partial<CreateTransactionOptions>,
+  ): Promise<CreateTransactionJSAPIResult>;
+  async createTransactionJSAPI(
+    optionsOrOutTradeNo: string | Require<CreateTransactionOptions, 'payer'>,
+    description?: string,
+    totalAmount?: number,
+    openId?: string,
+    options?: Partial<CreateTransactionOptions>,
   ) {
-    return await this.request(
-      'POST',
-      CloseTransactionUrl(combineOutTradeNo),
-      Object.assign({
-        combine_appid: this._appId,
-      }, options),
-    );
-  }
-
-  async createRefund(options: CreateRefundOptions) {
-    if (!options.out_refund_no && !options.transaction_id) {
-      throw new WechatpayError('missing out_trade_no or transaction_id');
+    if ('string' !== typeof optionsOrOutTradeNo) {
+      options = optionsOrOutTradeNo;
+    } else {
+      options = merge(
+        {
+          description,
+          out_trade_no: optionsOrOutTradeNo,
+          amount: {
+            total: totalAmount,
+          },
+          payer: {
+            openid: openId,
+          },
+        } as CreateTransactionOptions,
+        options,
+      );
     }
+    return await this.createTransaction(
+      options as CreateTransactionOptions,
+      PaymentMethod.JSAPI,
+    );
+  }
 
-    return await this.request<RefundDetails>(
+  async createTransactionAPP(
+    options: CreateTransactionOptions,
+  ): Promise<CreateTransactionAPPResult>;
+  async createTransactionAPP(
+    outTradeNo: string,
+    description: string,
+    totalAmount: number,
+    options?: Partial<CreateTransactionOptions>,
+  ): Promise<CreateTransactionAPPResult>;
+  async createTransactionAPP(
+    optionsOrOutTradeNo: string | CreateTransactionOptions,
+    description?: string,
+    totalAmount?: number,
+    options?: Partial<CreateTransactionOptions>,
+  ) {
+    if ('string' !== typeof optionsOrOutTradeNo) {
+      options = optionsOrOutTradeNo;
+    } else {
+      options = merge(
+        {
+          description,
+          out_trade_no: optionsOrOutTradeNo,
+          amount: {
+            total: totalAmount,
+          },
+        } as CreateTransactionOptions,
+        options,
+      );
+    }
+    return await this.createTransaction(
+      options as CreateTransactionOptions,
+      PaymentMethod.APP,
+    );
+  }
+
+  async createTransactionNative(
+    options: CreateTransactionOptions,
+  ): Promise<CreateTransactionNativeResult>;
+  async createTransactionNative(
+    outTradeNo: string,
+    description: string,
+    totalAmount: number,
+    options?: Partial<CreateTransactionOptions>,
+  ): Promise<CreateTransactionNativeResult>;
+  async createTransactionNative(
+    optionsOrOutTradeNo: string | CreateTransactionOptions,
+    description?: string,
+    totalAmount?: number,
+    options?: Partial<CreateTransactionOptions>,
+  ) {
+    if ('string' !== typeof optionsOrOutTradeNo) {
+      options = optionsOrOutTradeNo;
+    } else {
+      options = merge(
+        {
+          description,
+          out_trade_no: optionsOrOutTradeNo,
+          amount: {
+            total: totalAmount,
+          },
+        } as CreateTransactionOptions,
+        options,
+      );
+    }
+    return await this.createTransaction(
+      options as CreateTransactionOptions,
+      PaymentMethod.Native,
+    );
+  }
+
+  private async createTransaction(
+    options: CreateTransactionOptions,
+    paymentMethod: PaymentMethod,
+  ) {
+    return await this._request<CreateTransactionResult>(
       'POST',
-      RefundUrl(),
-      Object.assign({
-        notify_url: this._refundNotifyUrl,
-      }, options),
+      CreateTransactionUrl(paymentMethod),
+      Object.assign(
+        {
+          appid: this._appId,
+          mchid: this._mchId,
+          notify_url: this._transactionNotifyUrl,
+        },
+        options,
+      ),
     );
   }
 
-  async queryRefund(outRefundNo: string) {
-    return await this.request<RefundDetails>(
-      'GET',
-      QueryRefundUrl(outRefundNo),
-    );
-  }
-
-  async tradeBill(
-    billDate: string,
-    billType: BillType = 'ALL',
-    tarType?: 'GZIP',
-  ) {
-    return await this.request<TradeBillResult>(
-      'GET',
-      TradeBillUrl(billDate, billType, tarType),
-    );
-  }
-
-  async fundFlowBill(
-    billDate: string,
-    accountType: AccountType = 'BASIC',
-    tarType?: 'GZIP',
-  ) {
-    return await this.request<FundFlowBillResult>(
-      'GET',
-      FundFlowBillUrl(billDate, accountType, tarType),
-    );
-  }
-
-  async download(downloadUrl: string) {
-    return await this.request<Buffer>('GET', downloadUrl);
-  }
-
-  getPaySign(prepayId: string) {
-    const timestamp = Math.floor(Date.now() / 1000);
+  private getToken(method: Method, url: string, dataStr: string) {
     const nonceStr = this._generateNonceFunc(this._nonceLength);
-    const message = buildPaySignMessage(
-      this._appId,
+    const timestamp = Math.floor(Date.now() / 1000);
+    const message = buildRequestMessage(
+      method,
+      url,
       timestamp,
       nonceStr,
-      prepayId,
-      this._appIdType,
+      dataStr,
     );
-    const paySign = sign(this._privateKey, message);
-
-    return {
-      appId: this._appId,
-      mchId: this._mchId,
-      timestamp,
+    const signature = sign(this._privateKey, message);
+    return buildToken(
+      this._mchId,
       nonceStr,
-      signType: 'RSA',
-      paySign,
-    };
+      timestamp,
+      this._serialNo,
+      signature,
+    );
   }
 
-  decipher(ciphertext: string, associatedData: string, nonceStr: string) {
+  private decipher(
+    ciphertext: string,
+    associatedData: string,
+    nonceStr: string,
+  ) {
     const buff = Buffer.from(ciphertext, 'base64');
 
-    const authTag = buff.slice(buff.length - 16);
-    const data = buff.slice(0, buff.length - 16);
+    const authTag = buff.subarray(buff.length - 16);
+    const data = buff.subarray(0, buff.length - 16);
 
     const _decipher = crypto.createDecipheriv(
       'aes-256-gcm',
@@ -337,48 +281,5 @@ export class Wechatpay {
 
     _decipher.final();
     return decoded;
-  }
-
-  private _getToken(method: urllib.HttpMethod, url: string, bodyStr: string) {
-    const nonceStr = this._generateNonceFunc(this._nonceLength);
-    const timestamp = Math.floor(Date.now() / 1000);
-    const message = buildRequestMessage(
-      method,
-      url,
-      timestamp,
-      nonceStr,
-      bodyStr,
-    );
-    const signature = sign(this._privateKey, message);
-
-    return buildToken(
-      this._mchId,
-      nonceStr,
-      timestamp,
-      this._serialNo,
-      signature,
-    );
-  }
-
-  private _success<T>(data: T): SuccessResult<T> {
-    return {
-      isSuccess: true,
-      data,
-    };
-  }
-
-  private _fail(
-    message: string,
-    code: string,
-    status: number,
-    detail?: any,
-  ): FailResult {
-    return {
-      isSuccess: false,
-      message,
-      code,
-      status,
-      detail,
-    };
   }
 }

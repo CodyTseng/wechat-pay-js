@@ -11,8 +11,6 @@ export type FailResult = {
   detail?: any;
 };
 
-export type AppIdType = 'JSAPI' | 'APP' | 'NATIVE';
-
 export type TradeType =
   | 'JSAPI'
   | 'NATIVE'

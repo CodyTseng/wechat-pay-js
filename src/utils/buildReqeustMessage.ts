@@ -1,5 +1,7 @@
+import { Method } from 'axios';
+
 export function buildRequestMessage(
-  method: urllib.HttpMethod,
+  method: Method,
   url: string,
   timestamp: number,
   nonceStr: string,
