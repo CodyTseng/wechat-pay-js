@@ -1,4 +1,4 @@
-export * from './bill.interface';
+export * from './download.interface';
 export * from './certificate.interface';
 export * from './combine-transaction.interface';
 export * from './common.interface';

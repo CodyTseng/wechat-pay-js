@@ -32,7 +32,7 @@ export type PromotionScope = 'GLOBAL' | 'SINGLE'; // GLOBAL：全场代金券; S
 
 export type PromotionType = 'CASH' | 'NOCASH'; // CASH：充值; NOCASH：预充值
 
-export type Currency = 'CNT';
+export type Currency = 'CNY';
 
 export type RefundChannel =
   | 'ORIGINAL'

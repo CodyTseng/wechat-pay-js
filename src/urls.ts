@@ -9,13 +9,13 @@ export const CreateTransactionUrl = (paymentMethod: PaymentMethod) =>
 export const CreateCombineTransactionUrl = (paymentMethod: PaymentMethod) =>
   `https://api.mch.weixin.qq.com/v3/combine-transactions/${paymentMethod}`;
 
-export const QueryTransactionUrl = (id: string, mchId: string) =>
+export const GetTransactionByTransactionIdUrl = (id: string, mchId: string) =>
   `https://api.mch.weixin.qq.com/v3/pay/transactions/id/${id}?mchid=${mchId}`;
 
 export const QueryCombineTransactionUrl = (combineOutTradeNo: string) =>
   `https://api.mch.weixin.qq.com/v3/combine-transactions/out-trade-no/${combineOutTradeNo}`;
 
-export const QueryTransactionByOutTradeNoUrl = (
+export const GetTransactionByOutTradeNoUrl = (
   outTradeNo: string,
   mchId: string,
 ) =>

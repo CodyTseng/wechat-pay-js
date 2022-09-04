@@ -1,14 +1,20 @@
 import axios, { Method, AxiosResponse } from 'axios';
 import { merge } from 'lodash';
 import {
+  AccountType,
+  BillType,
   Certificate,
+  CreateRefundOptions,
   CreateTransactionAPPResult,
   CreateTransactionJSAPIResult,
   CreateTransactionNativeResult,
   CreateTransactionOptions,
   CreateTransactionResult,
+  DownloadInfo,
   GenerateNonceFunc,
   QueryCertificatesResult,
+  RefundDetails,
+  TransactionDetails,
   WechatpayOptions,
 } from './interfaces';
 import {
@@ -21,7 +27,17 @@ import {
   verify,
 } from './utils';
 import * as crypto from 'crypto';
-import { CertificatesUrl, CreateTransactionUrl } from './urls';
+import {
+  CertificatesUrl,
+  CloseTransactionUrl,
+  CreateTransactionUrl,
+  FundFlowBillUrl,
+  GetTransactionByOutTradeNoUrl,
+  GetTransactionByTransactionIdUrl,
+  QueryRefundUrl,
+  RefundUrl,
+  TradeBillUrl,
+} from './urls';
 import { PaymentMethod } from './contants';
 import { WechatpayError } from './error';
 
@@ -55,7 +71,12 @@ export class Wechatpay {
     this._refundNotifyUrl = options.refundNotifyUrl;
   }
 
-  async _request<R = void, D = any>(method: Method, url: string, data?: D) {
+  async _request<R = void, D = any>(
+    method: Method,
+    url: string,
+    data?: D,
+    skipVerify = false,
+  ) {
     const dataStr = data ? JSON.stringify(data) : '';
     const token = this.getToken(method, url, dataStr);
     const result = await axios.request<R, AxiosResponse<R, D>, D>({
@@ -69,7 +90,10 @@ export class Wechatpay {
       },
     });
 
-    if (this._needVerify && this._certs.length > 0) {
+    if (this._needVerify && this._certs.length > 0 && !skipVerify) {
+      if (this._certs.length <= 0) {
+        throw new WechatpayError('未调用 updateCerts 方法更新证书');
+      }
       const message = buildVerifyMessage(
         result.headers['wechatpay-timestamp'],
         result.headers['wechatpay-nonce'],
@@ -98,6 +122,8 @@ export class Wechatpay {
     const res = await this._request<QueryCertificatesResult>(
       'GET',
       CertificatesUrl(),
+      undefined,
+      true,
     );
 
     this._certs = res.data.map((item) => {
@@ -236,6 +262,106 @@ export class Wechatpay {
         },
         options,
       ),
+    );
+  }
+
+  async getTransactionByTransactionId(transactionId: string) {
+    return await this._request<TransactionDetails>(
+      'GET',
+      GetTransactionByTransactionIdUrl(transactionId, this._mchId),
+    );
+  }
+
+  async getTransactionByOutTradeNo(outTradeNo: string) {
+    return await this._request<TransactionDetails>(
+      'GET',
+      GetTransactionByOutTradeNoUrl(outTradeNo, this._mchId),
+    );
+  }
+
+  async closeTransaction(outTradeNo: string) {
+    return await this._request<void>('POST', CloseTransactionUrl(outTradeNo), {
+      mchid: this._mchId,
+    });
+  }
+
+  async createRefund(options: CreateRefundOptions): Promise<RefundDetails>;
+  async createRefund(
+    outRefundNo: string,
+    refundAmount: number,
+    totalAmount: number,
+    options: Partial<CreateRefundOptions>,
+  ): Promise<RefundDetails>;
+  async createRefund(
+    outRefundNoOrOptions: string | CreateRefundOptions,
+    refundAmount?: number,
+    totalAmount?: number,
+    options?: Partial<CreateRefundOptions>,
+  ) {
+    if ('string' !== typeof outRefundNoOrOptions) {
+      options = outRefundNoOrOptions;
+    } else {
+      options = merge(
+        {
+          out_refund_no: outRefundNoOrOptions,
+          amount: {
+            refund: refundAmount,
+            total: totalAmount,
+            currency: 'CNY',
+          },
+        } as CreateRefundOptions,
+        options,
+      );
+    }
+    return await this._request<RefundDetails>(
+      'POST',
+      RefundUrl(),
+      Object.assign(
+        {
+          appid: this._appId,
+          mchid: this._mchId,
+          notify_url: this._refundNotifyUrl,
+        },
+        options,
+      ),
+    );
+  }
+
+  async getRefund(outRefundNo: string) {
+    return await this._request<RefundDetails>(
+      'GET',
+      QueryRefundUrl(outRefundNo),
+    );
+  }
+
+  async getTradeBill(
+    billDate: string,
+    billType: BillType = 'ALL',
+    tarType?: 'GZIP',
+  ) {
+    return await this._request<DownloadInfo>(
+      'GET',
+      TradeBillUrl(billDate, billType, tarType),
+    );
+  }
+
+  async getFundFlowBill(
+    billDate: string,
+    accountType: AccountType = 'BASIC',
+    tarType?: 'GZIP',
+  ) {
+    return await this._request<DownloadInfo>(
+      'GET',
+      FundFlowBillUrl(billDate, accountType, tarType),
+    );
+  }
+
+  async downloadBill(downloadInfo: DownloadInfo) {
+    return await this._request(
+      'GET',
+      downloadInfo.download_url,
+      undefined,
+      true,
     );
   }
 
