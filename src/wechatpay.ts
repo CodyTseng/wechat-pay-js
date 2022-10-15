@@ -1,5 +1,8 @@
-import axios, { Method, AxiosResponse } from 'axios';
+import axios, { AxiosResponse, Method } from 'axios';
+import * as crypto from 'crypto';
 import { merge } from 'lodash';
+import { PaymentMethod } from './contants';
+import { WechatpayError } from './error';
 import {
   AccountType,
   BillType,
@@ -18,16 +21,6 @@ import {
   WechatpayOptions,
 } from './interfaces';
 import {
-  buildRequestMessage,
-  buildToken,
-  buildVerifyMessage,
-  generateNonce,
-  Require,
-  sign,
-  verify,
-} from './utils';
-import * as crypto from 'crypto';
-import {
   CertificatesUrl,
   CloseTransactionUrl,
   CreateTransactionUrl,
@@ -38,8 +31,15 @@ import {
   RefundUrl,
   TradeBillUrl,
 } from './urls';
-import { PaymentMethod } from './contants';
-import { WechatpayError } from './error';
+import {
+  buildRequestMessage,
+  buildToken,
+  buildVerifyMessage,
+  generateNonce,
+  Require,
+  sign,
+  verify,
+} from './utils';
 
 export class Wechatpay {
   private _appId: string;
