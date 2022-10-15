@@ -137,17 +137,17 @@ export class Wechatpay {
     });
   }
 
-  async createTransactionJSAPI(
+  async createJSAPITransaction(
     options: CreateTransactionOptions,
   ): Promise<CreateTransactionJSAPIResult>;
-  async createTransactionJSAPI(
+  async createJSAPITransaction(
     outTradeNo: string,
     description: string,
     totalAmount: number,
     openId: string,
     options?: Partial<CreateTransactionOptions>,
   ): Promise<CreateTransactionJSAPIResult>;
-  async createTransactionJSAPI(
+  async createJSAPITransaction(
     optionsOrOutTradeNo: string | Require<CreateTransactionOptions, 'payer'>,
     description?: string,
     totalAmount?: number,
@@ -177,16 +177,16 @@ export class Wechatpay {
     );
   }
 
-  async createTransactionAPP(
+  async createAPPTransaction(
     options: CreateTransactionOptions,
   ): Promise<CreateTransactionAPPResult>;
-  async createTransactionAPP(
+  async createAPPTransaction(
     outTradeNo: string,
     description: string,
     totalAmount: number,
     options?: Partial<CreateTransactionOptions>,
   ): Promise<CreateTransactionAPPResult>;
-  async createTransactionAPP(
+  async createAPPTransaction(
     optionsOrOutTradeNo: string | CreateTransactionOptions,
     description?: string,
     totalAmount?: number,
@@ -212,16 +212,16 @@ export class Wechatpay {
     );
   }
 
-  async createTransactionNative(
+  async createNativeTransaction(
     options: CreateTransactionOptions,
   ): Promise<CreateTransactionNativeResult>;
-  async createTransactionNative(
+  async createNativeTransaction(
     outTradeNo: string,
     description: string,
     totalAmount: number,
     options?: Partial<CreateTransactionOptions>,
   ): Promise<CreateTransactionNativeResult>;
-  async createTransactionNative(
+  async createNativeTransaction(
     optionsOrOutTradeNo: string | CreateTransactionOptions,
     description?: string,
     totalAmount?: number,
