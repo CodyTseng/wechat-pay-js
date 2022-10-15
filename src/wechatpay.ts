@@ -378,7 +378,7 @@ export class Wechatpay {
     );
   }
 
-  private decipher(
+  public decipher(
     ciphertext: string,
     associatedData: string,
     nonceStr: string,
