@@ -5,7 +5,7 @@ export interface Certificate {
   serial_no: string;
 }
 
-export interface QueryCertificatesResult {
+export interface GetCertificatesResult {
   data: {
     effective_time: string;
     encrypt_certificate: {

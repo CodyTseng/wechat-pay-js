@@ -1,36 +1,25 @@
 import axios, { AxiosResponse, Method } from 'axios';
 import * as crypto from 'crypto';
 import { merge } from 'lodash';
-import { PaymentMethod } from './contants';
+import { EndPoint, PaymentMethod } from './contants';
 import { WechatpayError } from './error';
 import {
   AccountType,
   BillType,
   Certificate,
+  CreateAPPTransactionResult,
+  CreateJSAPITransactionResult,
+  CreateNativeTransactionResult,
   CreateRefundOptions,
-  CreateTransactionAPPResult,
-  CreateTransactionJSAPIResult,
-  CreateTransactionNativeResult,
   CreateTransactionOptions,
   CreateTransactionResult,
-  DownloadInfo,
+  DownloadDetail,
   GenerateNonceFunc,
-  QueryCertificatesResult,
+  GetCertificatesResult,
   RefundDetails,
   TransactionDetails,
   WechatpayOptions,
 } from './interfaces';
-import {
-  CertificatesUrl,
-  CloseTransactionUrl,
-  CreateTransactionUrl,
-  FundFlowBillUrl,
-  GetTransactionByOutTradeNoUrl,
-  GetTransactionByTransactionIdUrl,
-  QueryRefundUrl,
-  RefundUrl,
-  TradeBillUrl,
-} from './urls';
 import {
   buildRequestMessage,
   buildToken,
@@ -119,9 +108,9 @@ export class Wechatpay {
   }
 
   async updateCerts() {
-    const res = await this._request<QueryCertificatesResult>(
+    const res = await this._request<GetCertificatesResult>(
       'GET',
-      CertificatesUrl(),
+      EndPoint.Certificate,
       undefined,
       true,
     );
@@ -139,14 +128,14 @@ export class Wechatpay {
 
   async createJSAPITransaction(
     options: CreateTransactionOptions,
-  ): Promise<CreateTransactionJSAPIResult>;
+  ): Promise<CreateJSAPITransactionResult>;
   async createJSAPITransaction(
     outTradeNo: string,
     description: string,
     totalAmount: number,
     openId: string,
     options?: Partial<CreateTransactionOptions>,
-  ): Promise<CreateTransactionJSAPIResult>;
+  ): Promise<CreateJSAPITransactionResult>;
   async createJSAPITransaction(
     optionsOrOutTradeNo: string | Require<CreateTransactionOptions, 'payer'>,
     description?: string,
@@ -179,13 +168,13 @@ export class Wechatpay {
 
   async createAPPTransaction(
     options: CreateTransactionOptions,
-  ): Promise<CreateTransactionAPPResult>;
+  ): Promise<CreateAPPTransactionResult>;
   async createAPPTransaction(
     outTradeNo: string,
     description: string,
     totalAmount: number,
     options?: Partial<CreateTransactionOptions>,
-  ): Promise<CreateTransactionAPPResult>;
+  ): Promise<CreateAPPTransactionResult>;
   async createAPPTransaction(
     optionsOrOutTradeNo: string | CreateTransactionOptions,
     description?: string,
@@ -214,13 +203,13 @@ export class Wechatpay {
 
   async createNativeTransaction(
     options: CreateTransactionOptions,
-  ): Promise<CreateTransactionNativeResult>;
+  ): Promise<CreateNativeTransactionResult>;
   async createNativeTransaction(
     outTradeNo: string,
     description: string,
     totalAmount: number,
     options?: Partial<CreateTransactionOptions>,
-  ): Promise<CreateTransactionNativeResult>;
+  ): Promise<CreateNativeTransactionResult>;
   async createNativeTransaction(
     optionsOrOutTradeNo: string | CreateTransactionOptions,
     description?: string,
@@ -253,7 +242,7 @@ export class Wechatpay {
   ) {
     return await this._request<CreateTransactionResult>(
       'POST',
-      CreateTransactionUrl(paymentMethod),
+      `${EndPoint.Transaction}/${paymentMethod}`,
       Object.assign(
         {
           appid: this._appId,
@@ -268,21 +257,25 @@ export class Wechatpay {
   async getTransactionByTransactionId(transactionId: string) {
     return await this._request<TransactionDetails>(
       'GET',
-      GetTransactionByTransactionIdUrl(transactionId, this._mchId),
+      `${EndPoint.Transaction}/id/${transactionId}?mchid=${this._mchId}`,
     );
   }
 
   async getTransactionByOutTradeNo(outTradeNo: string) {
     return await this._request<TransactionDetails>(
       'GET',
-      GetTransactionByOutTradeNoUrl(outTradeNo, this._mchId),
+      `${EndPoint.Transaction}/out-trade-no/${outTradeNo}?mchid=${this._mchId}`,
     );
   }
 
   async closeTransaction(outTradeNo: string) {
-    return await this._request<void>('POST', CloseTransactionUrl(outTradeNo), {
-      mchid: this._mchId,
-    });
+    return await this._request<void>(
+      'POST',
+      `${EndPoint.Transaction}/out-trade-no/${outTradeNo}/close`,
+      {
+        mchid: this._mchId,
+      },
+    );
   }
 
   async createRefund(options: CreateRefundOptions): Promise<RefundDetails>;
@@ -315,7 +308,7 @@ export class Wechatpay {
     }
     return await this._request<RefundDetails>(
       'POST',
-      RefundUrl(),
+      EndPoint.Refund,
       Object.assign(
         {
           appid: this._appId,
@@ -330,7 +323,7 @@ export class Wechatpay {
   async getRefund(outRefundNo: string) {
     return await this._request<RefundDetails>(
       'GET',
-      QueryRefundUrl(outRefundNo),
+      `${EndPoint.Refund}/${outRefundNo}`,
     );
   }
 
@@ -339,10 +332,10 @@ export class Wechatpay {
     billType: BillType = 'ALL',
     tarType?: 'GZIP',
   ) {
-    return await this._request<DownloadInfo>(
-      'GET',
-      TradeBillUrl(billDate, billType, tarType),
-    );
+    const url =
+      `${EndPoint.Bill}/tradebill?bill_date=${billDate}&bill_type=${billType}` +
+      (tarType ? `&tar_type=${tarType}` : '');
+    return await this._request<DownloadDetail>('GET', url);
   }
 
   async getFundFlowBill(
@@ -350,13 +343,13 @@ export class Wechatpay {
     accountType: AccountType = 'BASIC',
     tarType?: 'GZIP',
   ) {
-    return await this._request<DownloadInfo>(
-      'GET',
-      FundFlowBillUrl(billDate, accountType, tarType),
-    );
+    const url =
+      `${EndPoint.Bill}/tradebill?bill_date=${billDate}&account_type=${accountType}` +
+      (tarType ? `&tar_type=${tarType}` : '');
+    return await this._request<DownloadDetail>('GET', url);
   }
 
-  async downloadBill(downloadInfo: DownloadInfo) {
+  async downloadBill(downloadInfo: DownloadDetail) {
     return await this._request(
       'GET',
       downloadInfo.download_url,

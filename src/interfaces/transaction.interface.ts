@@ -54,19 +54,19 @@ export interface CreateTransactionOptions {
 }
 
 export type CreateTransactionResult =
-  | CreateTransactionJSAPIResult
-  | CreateTransactionAPPResult
-  | CreateTransactionNativeResult;
+  | CreateJSAPITransactionResult
+  | CreateAPPTransactionResult
+  | CreateNativeTransactionResult;
 
-export interface CreateTransactionJSAPIResult {
+export interface CreateJSAPITransactionResult {
   prepay_id: string; // 预支付交易会话标识
 }
 
-export interface CreateTransactionAPPResult {
+export interface CreateAPPTransactionResult {
   prepay_id: string; // 预支付交易会话标识
 }
 
-export interface CreateTransactionNativeResult {
+export interface CreateNativeTransactionResult {
   code_url: string; // 二维码链接
 }
 
