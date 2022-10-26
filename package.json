@@ -2,16 +2,21 @@
   "name": "@codytseng/wechatpay-v3",
   "version": "0.1.0",
   "description": "wechatpay v3 sdk for nodejs",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "author": "CodyTseng",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "lint": "eslint \"src/**/*.{js,ts}\" --fix",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run lint",
-    "preversion": "npm run lint",
-    "postversion": "git push && git push --tags"
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "format": "prettier \"src/**/*.ts\" --write",
+    "precommit": "lint-staged",
+    "prepublish": "npm run build",
+    "publish": "npm publish --access public",
+    "release": "release-it",
+    "postversion": "git push && git push --tags",
+    "prepare": "husky install"
   },
   "repository": {
     "type": "git",
@@ -24,8 +29,6 @@
     "sdk",
     "v3"
   ],
-  "author": "CodyTseng",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/CodyTseng/wechatpay-v3/issues"
   },
@@ -38,15 +41,20 @@
     "eslint": "^8.2.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
+    "husky": "^8.0.1",
+    "lint-staged": "^13.0.3",
     "prettier": "^2.4.1",
     "typescript": "^4.5.2"
   },
   "files": [
-    "lib/*"
+    "dist/*"
   ],
   "dependencies": {
     "axios": "^0.27.2",
     "crypto": "^1.0.1",
     "lodash": "^4.17.21"
+  },
+  "lint-staged": {
+    "**/*.{ts,json}": []
   }
 }
